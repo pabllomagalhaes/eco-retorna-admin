@@ -1,0 +1,221 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================================================
+    // 1. FUNÇÕES AUXILIARES DE AUTENTICAÇÃO E AUTORIZAÇÃO
+    // ==================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true;
+    }
+
+    // ==================================================
+    // 2. USERS
+    // users/{userId}
+    // PARTICIPANTE:
+    // - Lê apenas o próprio documento.
+    // - Cria o próprio documento somente quando role == "participant" e active == true.
+    // - Atualiza apenas o próprio perfil usando allowlist estrita:
+    //   ['name', 'email', 'city', 'neighborhood', 'avatarUrl', 'preferences', 'updatedAt']
+    //   Não pode alterar nenhum outro campo (especialmente role, active, createdAt, isAdmin).
+    // - Não pode excluir usuário.
+    // ADMIN:
+    // - Lê documentos necessários para busca operacional de participantes.
+    // - Não precisa editar dados pessoais do participante nesta versão.
+    // ==================================================
+    match /users/{userId} {
+      allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == "participant"
+        && request.resource.data.active == true
+        && request.resource.data.keys().hasOnly([
+          'name', 'email', 'role', 'active', 'createdAt', 'updatedAt',
+          'city', 'neighborhood', 'avatarUrl', 'preferences',
+          'pointsBalance', 'totalPointsEarned', 'totalItemsRecycled', 'totalCo2AvoidedKg'
+        ]);
+
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'email', 'city', 'neighborhood', 'avatarUrl', 'preferences', 'updatedAt'
+        ]);
+
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 3. MATERIALS
+    // materials/{materialId}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // delete: false (materiais desativados com active: false)
+    // ==================================================
+    match /materials/{materialId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 4. SETTINGS
+    // settings/{settingId}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // delete: false
+    // ==================================================
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 5. RECYCLING RECORDS
+    // recyclingRecords/{recordId}
+    // PARTICIPANTE:
+    // - Lê apenas quando resource.data.userId == request.auth.uid
+    // - Não pode: create, update, delete
+    // ADMIN:
+    // - Pode ler e criar.
+    // - Não pode update ou delete (registros históricos e imutáveis).
+    // ==================================================
+    match /recyclingRecords/{recordId} {
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ==================================================
+    // 6. REDEMPTIONS
+    // redemptions/{id}
+    // Participante:
+    // - Lê os próprios (resource.data.userId == request.auth.uid).
+    // - Cria somente quando userId == request.auth.uid e demonstrative == true.
+    // - Não pode atualizar ou excluir.
+    // Admin:
+    // - Pode ler para indicadores.
+    // ==================================================
+    match /redemptions/{id} {
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.demonstrative == true;
+      allow update, delete: if false;
+    }
+
+    // ==================================================
+    // 7. DONATIONS
+    // donations/{id}
+    // Participante:
+    // - Lê as próprias doações (resource.data.userId == request.auth.uid).
+    // - Cria somente quando userId == request.auth.uid e demonstrative == true.
+    // - Sem update/delete.
+    // Admin:
+    // - Pode ler para indicadores.
+    // ==================================================
+    match /donations/{id} {
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.demonstrative == true;
+      allow update, delete: if false;
+    }
+
+    // ==================================================
+    // 8. CAMPAIGNS
+    // campaigns/{id}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // Preferir active: false em vez de excluir; sem escrita pelo participante.
+    // ==================================================
+    match /campaigns/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 9. BENEFITS
+    // benefits/{id}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // Participante não escreve catálogo; preferir active: false em vez de excluir.
+    // ==================================================
+    match /benefits/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 10. EVENTS
+    // events/{id}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // Sem escrita pelo participante; delete: false.
+    // ==================================================
+    match /events/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 11. COLLECTION POINTS
+    // collectionPoints/{id}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // Sem escrita pelo participante; delete: false.
+    // ==================================================
+    match /collectionPoints/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 12. BADGES
+    // badges/{id}
+    // Participante autenticado: read
+    // Admin: read, create, update
+    // delete: false
+    // ==================================================
+    match /badges/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 13. USER BADGES
+    // userBadges/{id}
+    // Participante: lê somente quando resource.data.userId == request.auth.uid
+    // Admin: read, create, update se necessário futuramente.
+    // delete: false
+    // ==================================================
+    match /userBadges/{id} {
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ==================================================
+    // 14. SEGURANÇA PADRÃO (DEFAULT DENY)
+    // Qualquer coleção não explicitamente permitida é bloqueada.
+    // NUNCA utilizar allow read, write: if true;
+    // ==================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

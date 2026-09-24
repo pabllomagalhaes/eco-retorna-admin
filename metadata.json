@@ -1,0 +1,6 @@
+{
+  "name": "EcoRetorna Admin",
+  "description": "Painel administrativo para gestão de reciclagens, campanhas, benefícios, eventos, ecopontos e impacto da rede EcoRetorna.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
