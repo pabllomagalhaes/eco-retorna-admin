@@ -60,21 +60,28 @@ export const ecopontoRepository = {
     return all.find((p) => p.id === id) || null;
   },
 
-  async create(point: Omit<CollectionPoint, 'id'>): Promise<CollectionPoint> {
+  async create(point: Omit<CollectionPoint, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }): Promise<CollectionPoint> {
     const id = `pt_${Date.now()}`;
-    const newPoint: CollectionPoint = {
-      id,
-      ...point,
-      operatingHours: point.operatingHours || point.openingHours || '08:00 às 18:00',
-      city: point.city || 'Curitiba - PR',
-      description: point.description || '',
-      notes: point.notes || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const now = new Date().toISOString();
+    const { id: _ignoredId, ...payload } = point as any;
+
+    const firestorePayload = {
+      ...payload,
+      operatingHours: payload.operatingHours || payload.openingHours || '08:00 às 18:00',
+      city: payload.city || 'Curitiba - PR',
+      description: payload.description || '',
+      notes: payload.notes || '',
+      createdAt: now,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('collectionPoints', id, newPoint, 'set');
+    await writeToFirestoreFirst('collectionPoints', id, firestorePayload, 'set');
+
+    const newPoint: CollectionPoint = {
+      id,
+      ...firestorePayload,
+    };
 
     localStore.data.collectionPoints.unshift(newPoint);
     localStore.save();
@@ -90,6 +97,17 @@ export const ecopontoRepository = {
       throw new Error(`Ecoponto com ID '${id}' não encontrado.`);
     }
 
+    const { id: _ignoredId, ...payloadUpdates } = updates as any;
+    const now = new Date().toISOString();
+
+    const firestorePayload = {
+      ...payloadUpdates,
+      updatedAt: now,
+    };
+
+    // Remote-first
+    await writeToFirestoreFirst('collectionPoints', id, firestorePayload, 'update');
+
     const updated: CollectionPoint = {
       ...(existing || {
         id,
@@ -104,15 +122,12 @@ export const ecopontoRepository = {
         description: '',
         active: true,
         notes: '',
-        createdAt: '',
+        createdAt: now,
       }),
-      ...updates,
-      operatingHours: updates.operatingHours || updates.openingHours || existing?.operatingHours || '08:00 às 18:00',
-      updatedAt: new Date().toISOString(),
+      ...firestorePayload,
+      operatingHours: payloadUpdates.operatingHours || payloadUpdates.openingHours || existing?.operatingHours || '08:00 às 18:00',
+      id,
     };
-
-    // Remote-first
-    await writeToFirestoreFirst('collectionPoints', id, updated, 'update');
 
     if (index >= 0) {
       localStore.data.collectionPoints[index] = updated;

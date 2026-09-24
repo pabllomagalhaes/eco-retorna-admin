@@ -99,7 +99,8 @@ export const EventosPage: React.FC<EventosPageProps> = ({
       const updated = await eventService.toggleStatus(ev.id, !ev.active);
       setEvents((prev) => prev.map((e) => (e.id === ev.id ? updated : e)));
     } catch (err: any) {
-      alert(`Erro ao alterar status do evento: ${err.message}`);
+      console.error('Erro ao alterar status do evento:', err);
+      alert('Não foi possível alterar o status do evento. Tente novamente.');
     }
   };
 
@@ -110,23 +111,34 @@ export const EventosPage: React.FC<EventosPageProps> = ({
 
     try {
       await eventService.saveEvent({
-        id: editingEvent?.id,
+        ...(editingEvent?.id ? { id: editingEvent.id } : {}),
         title,
         description,
-        fullDescription,
+        ...(fullDescription.trim() ? { fullDescription: fullDescription.trim() } : {}),
         date,
         time,
         location,
         category,
         type,
-        severity: type === 'alerta' ? severity : undefined,
+        ...(type === 'alerta' ? { severity } : {}),
         active,
       });
 
       await loadEvents();
       setIsModalOpen(false);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao salvar evento.');
+      console.error('Erro ao salvar evento:', err);
+      let userMsg = 'Não foi possível salvar o evento. Tente novamente.';
+      if (
+        err instanceof Error &&
+        err.message &&
+        !err.message.includes('{') &&
+        !err.message.includes('FirebaseError') &&
+        !err.message.includes('authInfo')
+      ) {
+        userMsg = err.message;
+      }
+      setFormError(userMsg);
     } finally {
       setIsSaving(false);
     }

@@ -113,7 +113,8 @@ export const CampanhasPage: React.FC<CampanhasPageProps> = ({
       const updated = await campaignService.toggleStatus(camp.id, !camp.active);
       setCampaigns((prev) => prev.map((c) => (c.id === camp.id ? updated : c)));
     } catch (err: any) {
-      alert(`Erro ao alterar status: ${err.message}`);
+      console.error('Erro ao alterar status:', err);
+      alert('Não foi possível alterar o status da campanha. Tente novamente.');
     }
   };
 
@@ -124,14 +125,18 @@ export const CampanhasPage: React.FC<CampanhasPageProps> = ({
 
     try {
       await campaignService.saveCampaign({
-        id: editingCampaign?.id,
+        ...(editingCampaign?.id ? { id: editingCampaign.id } : {}),
         title,
         description,
         type,
         materialId,
-        multiplier: type === 'multiplier' ? Number(multiplier) : undefined,
-        minimumQuantity: type === 'quantity_bonus' ? Number(minimumQuantity) : undefined,
-        bonusPoints: type === 'quantity_bonus' ? Number(bonusPoints) : undefined,
+        ...(type === 'multiplier' ? { multiplier: Number(multiplier) } : {}),
+        ...(type === 'quantity_bonus'
+          ? {
+              minimumQuantity: Number(minimumQuantity),
+              bonusPoints: Number(bonusPoints),
+            }
+          : {}),
         startDate,
         endDate,
         active,
@@ -141,7 +146,18 @@ export const CampanhasPage: React.FC<CampanhasPageProps> = ({
       await loadData();
       setIsModalOpen(false);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao salvar campanha.');
+      console.error('Erro ao salvar campanha:', err);
+      let userFriendlyMessage = 'Não foi possível salvar a campanha. Tente novamente.';
+      if (
+        err instanceof Error &&
+        err.message &&
+        !err.message.includes('{') &&
+        !err.message.includes('FirebaseError') &&
+        !err.message.includes('authInfo')
+      ) {
+        userFriendlyMessage = err.message;
+      }
+      setFormError(userFriendlyMessage);
     } finally {
       setIsSaving(false);
     }

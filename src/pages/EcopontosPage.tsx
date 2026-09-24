@@ -107,7 +107,8 @@ export const EcopontosPage: React.FC = () => {
       const updated = await ecopontoService.toggleStatus(pt.id, !pt.active);
       setPoints((prev) => prev.map((p) => (p.id === pt.id ? updated : p)));
     } catch (err: any) {
-      alert(`Erro ao alterar status do ecoponto: ${err.message}`);
+      console.error('Erro ao alterar status do ecoponto:', err);
+      alert('Não foi possível alterar o status do ecoponto. Tente novamente.');
     }
   };
 
@@ -118,7 +119,7 @@ export const EcopontosPage: React.FC = () => {
 
     try {
       await ecopontoService.savePoint({
-        id: editingPoint?.id,
+        ...(editingPoint?.id ? { id: editingPoint.id } : {}),
         name,
         address,
         neighborhood,
@@ -128,14 +129,25 @@ export const EcopontosPage: React.FC = () => {
         operatingHours,
         acceptedMaterials,
         description,
-        notes,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
         active,
       });
 
       await loadData();
       setIsModalOpen(false);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao salvar ecoponto.');
+      console.error('Erro ao salvar ecoponto:', err);
+      let userMsg = 'Não foi possível salvar o ecoponto. Tente novamente.';
+      if (
+        err instanceof Error &&
+        err.message &&
+        !err.message.includes('{') &&
+        !err.message.includes('FirebaseError') &&
+        !err.message.includes('authInfo')
+      ) {
+        userMsg = err.message;
+      }
+      setFormError(userMsg);
     } finally {
       setIsSaving(false);
     }

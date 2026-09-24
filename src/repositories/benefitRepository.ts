@@ -40,17 +40,24 @@ export const benefitRepository = {
     return all.find((b) => b.id === id) || null;
   },
 
-  async create(benefit: Omit<Benefit, 'id'>): Promise<Benefit> {
+  async create(benefit: Omit<Benefit, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }): Promise<Benefit> {
     const id = `ben-${Date.now()}`;
-    const newBenefit: Benefit = {
-      id,
-      ...benefit,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const now = new Date().toISOString();
+    const { id: _ignoredId, ...payload } = benefit as any;
+
+    const firestorePayload = {
+      ...payload,
+      createdAt: now,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('benefits', id, newBenefit, 'set');
+    await writeToFirestoreFirst('benefits', id, firestorePayload, 'set');
+
+    const newBenefit: Benefit = {
+      id,
+      ...firestorePayload,
+    };
 
     localStore.data.benefits.unshift(newBenefit);
     localStore.save();
@@ -66,14 +73,32 @@ export const benefitRepository = {
       throw new Error(`Benefício com ID '${id}' não encontrado.`);
     }
 
-    const updated: Benefit = {
-      ...(existing || { id, title: '', description: '', category: 'gift', pointsRequired: 100, stock: null, active: true, createdAt: new Date().toISOString(), updatedAt: '' }),
-      ...updates,
-      updatedAt: new Date().toISOString(),
+    const { id: _ignoredId, ...payloadUpdates } = updates as any;
+    const now = new Date().toISOString();
+
+    const firestorePayload = {
+      ...payloadUpdates,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('benefits', id, updated, 'update');
+    await writeToFirestoreFirst('benefits', id, firestorePayload, 'update');
+
+    const updated: Benefit = {
+      ...(existing || {
+        id,
+        title: '',
+        description: '',
+        category: 'gift',
+        pointsRequired: 100,
+        stock: null,
+        active: true,
+        createdAt: now,
+        updatedAt: '',
+      }),
+      ...firestorePayload,
+      id,
+    };
 
     if (index >= 0) {
       localStore.data.benefits[index] = updated;

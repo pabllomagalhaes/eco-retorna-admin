@@ -56,13 +56,31 @@ export const campaignService = {
       }
     }
 
+    // Build conditional payload with NO undefined properties
+    const cleanPayload: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'> = {
+      title: campaignData.title.trim(),
+      description: campaignData.description.trim(),
+      type: campaignData.type,
+      materialId: campaignData.materialId,
+      active: Boolean(campaignData.active),
+      startDate: campaignData.startDate,
+      endDate: campaignData.endDate,
+      createdBy: campaignData.createdBy,
+      ...(campaignData.type === 'multiplier'
+        ? { multiplier: Number(campaignData.multiplier) }
+        : {}),
+      ...(campaignData.type === 'quantity_bonus'
+        ? {
+            minimumQuantity: Number(campaignData.minimumQuantity),
+            bonusPoints: Number(campaignData.bonusPoints),
+          }
+        : {}),
+    };
+
     if (campaignData.id) {
-      return campaignRepository.update(campaignData.id, campaignData);
+      return campaignRepository.update(campaignData.id, cleanPayload);
     } else {
-      return campaignRepository.create({
-        ...campaignData,
-        createdAt: new Date().toISOString(),
-      });
+      return campaignRepository.create(cleanPayload);
     }
   },
 

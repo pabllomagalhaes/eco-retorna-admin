@@ -40,13 +40,23 @@ export const eventService = {
       throw new Error('A data é obrigatória.');
     }
 
+    const cleanPayload: Omit<EventItem, 'id' | 'createdAt' | 'updatedAt'> = {
+      title: data.title.trim(),
+      description: data.description.trim(),
+      date: data.date,
+      time: data.time || '09:00',
+      location: data.location || '',
+      category: data.category || 'Geral',
+      type: data.type,
+      active: Boolean(data.active),
+      ...(data.fullDescription?.trim() ? { fullDescription: data.fullDescription.trim() } : {}),
+      ...(data.type === 'alerta' && data.severity ? { severity: data.severity } : {}),
+    };
+
     if (data.id) {
-      return eventRepository.update(data.id, data);
+      return eventRepository.update(data.id, cleanPayload);
     } else {
-      return eventRepository.create({
-        ...data,
-        createdAt: new Date().toISOString(),
-      });
+      return eventRepository.create(cleanPayload);
     }
   },
 

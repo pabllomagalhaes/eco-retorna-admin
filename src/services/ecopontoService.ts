@@ -37,13 +37,24 @@ export const ecopontoService = {
       throw new Error('O endereço do ecoponto é obrigatório.');
     }
 
+    const cleanPayload: Omit<CollectionPoint, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: data.name.trim(),
+      address: data.address.trim(),
+      neighborhood: data.neighborhood.trim(),
+      city: data.city.trim() || 'Curitiba - PR',
+      operatingHours: data.operatingHours.trim() || '08:00 às 18:00',
+      acceptedMaterials: data.acceptedMaterials,
+      latitude: Number(data.latitude) || 0,
+      longitude: Number(data.longitude) || 0,
+      description: data.description.trim(),
+      active: Boolean(data.active),
+      ...(data.notes?.trim() ? { notes: data.notes.trim() } : {}),
+    };
+
     if (data.id) {
-      return ecopontoRepository.update(data.id, data);
+      return ecopontoRepository.update(data.id, cleanPayload);
     } else {
-      return ecopontoRepository.create({
-        ...data,
-        createdAt: new Date().toISOString(),
-      });
+      return ecopontoRepository.create(cleanPayload);
     }
   },
 

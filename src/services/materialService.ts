@@ -51,13 +51,20 @@ export const materialService = {
       throw new Error('O fator de CO₂e não pode ser negativo.');
     }
 
+    const cleanPayload: Omit<Material, 'id' | 'updatedAt'> = {
+      name: materialData.name.trim(),
+      category: materialData.category,
+      pointsPerUnit: Number(materialData.pointsPerUnit),
+      co2eFactor: Number(materialData.co2eFactor),
+      active: Boolean(materialData.active),
+      unit: 'unidade',
+      ...(materialData.description?.trim() ? { description: materialData.description.trim() } : {}),
+    };
+
     if (materialData.id) {
-      return materialRepository.update(materialData.id, materialData);
+      return materialRepository.update(materialData.id, cleanPayload);
     } else {
-      return materialRepository.create({
-        ...materialData,
-        unit: 'unidade',
-      });
+      return materialRepository.create(cleanPayload);
     }
   },
 

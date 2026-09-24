@@ -93,19 +93,30 @@ export const MateriaisPage: React.FC = () => {
 
     try {
       await materialService.saveMaterial({
-        id: selectedMaterial?.id,
+        ...(selectedMaterial?.id ? { id: selectedMaterial.id } : {}),
         name: newName,
         category: newCategory,
         pointsPerUnit: Number(newPoints),
         co2eFactor: Number(newCO2eFactor),
         active: selectedMaterial ? selectedMaterial.active : true,
-        description: newDescription,
+        ...(newDescription.trim() ? { description: newDescription.trim() } : {}),
       });
 
       await loadMaterials();
       setIsEditModalOpen(false);
     } catch (err: any) {
-      setModalError(err.message || 'Erro ao atualizar regras do material.');
+      console.error('Erro ao atualizar regras do material:', err);
+      let userMsg = 'Não foi possível salvar o material. Tente novamente.';
+      if (
+        err instanceof Error &&
+        err.message &&
+        !err.message.includes('{') &&
+        !err.message.includes('FirebaseError') &&
+        !err.message.includes('authInfo')
+      ) {
+        userMsg = err.message;
+      }
+      setModalError(userMsg);
     } finally {
       setIsSaving(false);
     }
@@ -123,7 +134,8 @@ export const MateriaisPage: React.FC = () => {
       await loadMaterials();
       setIsConfirmOpen(false);
     } catch (err: any) {
-      alert(`Falha ao alterar status do material: ${err.message}`);
+      console.error('Falha ao alterar status do material:', err);
+      alert('Não foi possível alterar o status do material. Tente novamente.');
     }
   };
 

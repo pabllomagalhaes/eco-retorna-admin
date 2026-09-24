@@ -58,7 +58,14 @@ export const recyclingRepository = {
         const batch = writeBatch(db);
         for (const item of created) {
           const docRef = doc(db, 'recyclingRecords', item.id);
-          batch.set(docRef, item);
+          const { id: _ignoredId, ...payload } = item;
+          const sanitizedPayload: Record<string, any> = {};
+          for (const [key, value] of Object.entries(payload)) {
+            if (value !== undefined) {
+              sanitizedPayload[key] = value;
+            }
+          }
+          batch.set(docRef, sanitizedPayload);
         }
         // Commit remotely first
         await batch.commit();

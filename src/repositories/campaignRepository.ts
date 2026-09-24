@@ -40,16 +40,26 @@ export const campaignRepository = {
     return all.find((c) => c.id === id) || null;
   },
 
-  async create(campaign: Omit<Campaign, 'id'>): Promise<Campaign> {
+  async create(campaign: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }): Promise<Campaign> {
     const id = `camp-${Date.now()}`;
-    const newCampaign: Campaign = {
-      id,
-      ...campaign,
-      createdAt: new Date().toISOString(),
+    const now = new Date().toISOString();
+
+    // Separate id from payload so DocumentReference defines document ID
+    const { id: _ignoredId, ...payload } = campaign as any;
+
+    const firestorePayload = {
+      ...payload,
+      createdAt: now,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('campaigns', id, newCampaign, 'set');
+    await writeToFirestoreFirst('campaigns', id, firestorePayload, 'set');
+
+    const newCampaign: Campaign = {
+      id,
+      ...firestorePayload,
+    };
 
     localStore.data.campaigns.unshift(newCampaign);
     localStore.save();
@@ -65,14 +75,33 @@ export const campaignRepository = {
       throw new Error(`Campanha com ID '${id}' não encontrada.`);
     }
 
-    const updated: Campaign = {
-      ...(existing || { id, title: '', description: '', type: 'multiplier', materialId: 'pet_2l', startDate: '', endDate: '', active: true, createdAt: '', createdBy: '' }),
-      ...updates,
-      updatedAt: new Date().toISOString(),
+    const { id: _ignoredId, ...payloadUpdates } = updates as any;
+    const now = new Date().toISOString();
+
+    const firestorePayload = {
+      ...payloadUpdates,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('campaigns', id, updated, 'update');
+    await writeToFirestoreFirst('campaigns', id, firestorePayload, 'update');
+
+    const updated: Campaign = {
+      ...(existing || {
+        id,
+        title: '',
+        description: '',
+        type: 'multiplier',
+        materialId: 'pet_2l',
+        startDate: '',
+        endDate: '',
+        active: true,
+        createdAt: now,
+        createdBy: '',
+      }),
+      ...firestorePayload,
+      id,
+    };
 
     if (index >= 0) {
       localStore.data.campaigns[index] = updated;

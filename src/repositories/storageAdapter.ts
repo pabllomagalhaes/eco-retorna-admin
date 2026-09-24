@@ -120,10 +120,22 @@ export async function writeToFirestoreFirst<T extends Record<string, any>>(
   if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, collectionName, docId);
+
+      // Separate 'id' if present, since document ID is defined by DocumentReference
+      const { id: _ignoredId, ...payload } = data;
+
+      // Ensure no undefined properties are ever passed to Firestore setDoc/updateDoc
+      const sanitizedPayload: Record<string, any> = {};
+      for (const [key, value] of Object.entries(payload)) {
+        if (value !== undefined) {
+          sanitizedPayload[key] = value;
+        }
+      }
+
       if (operation === 'set') {
-        await setDoc(docRef, data, { merge: true });
+        await setDoc(docRef, sanitizedPayload, { merge: true });
       } else {
-        await updateDoc(docRef, data);
+        await updateDoc(docRef, sanitizedPayload);
       }
     } catch (error) {
       handleFirestoreError(

@@ -41,16 +41,23 @@ export const materialRepository = {
     return all.find((m) => m.id === id) || null;
   },
 
-  async create(material: Omit<Material, 'id'>): Promise<Material> {
+  async create(material: Omit<Material, 'id' | 'updatedAt'> & { updatedAt?: string }): Promise<Material> {
     const id = material.category === 'aluminio' ? 'lata_aluminio' : 'pet_2l';
-    const newMaterial: Material = {
-      id,
-      ...material,
-      updatedAt: new Date().toISOString(),
+    const now = new Date().toISOString();
+    const { id: _ignoredId, ...payload } = material as any;
+
+    const firestorePayload = {
+      ...payload,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('materials', id, newMaterial, 'set');
+    await writeToFirestoreFirst('materials', id, firestorePayload, 'set');
+
+    const newMaterial: Material = {
+      id,
+      ...firestorePayload,
+    };
 
     localStore.data.materials.push(newMaterial);
     localStore.save();
@@ -62,14 +69,22 @@ export const materialRepository = {
     const index = localStore.data.materials.findIndex((m) => m.id === id);
     const existing = index >= 0 ? localStore.data.materials[index] : null;
 
-    const updated: Material = {
-      ...(existing || { id, name: id, category: 'pet', unit: 'unidade', pointsPerUnit: 2, co2eFactor: 0.18, active: true }),
-      ...updates,
-      updatedAt: new Date().toISOString(),
+    const { id: _ignoredId, ...payloadUpdates } = updates as any;
+    const now = new Date().toISOString();
+
+    const firestorePayload = {
+      ...payloadUpdates,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('materials', id, updated, 'update');
+    await writeToFirestoreFirst('materials', id, firestorePayload, 'update');
+
+    const updated: Material = {
+      ...(existing || { id, name: id, category: 'pet', unit: 'unidade', pointsPerUnit: 2, co2eFactor: 0.18, active: true }),
+      ...firestorePayload,
+      id,
+    };
 
     if (index >= 0) {
       localStore.data.materials[index] = updated;

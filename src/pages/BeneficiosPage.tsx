@@ -97,7 +97,8 @@ export const BeneficiosPage: React.FC<BeneficiosPageProps> = ({
       const updated = await benefitService.toggleStatus(ben.id, !ben.active);
       setBenefits((prev) => prev.map((b) => (b.id === ben.id ? updated : b)));
     } catch (err: any) {
-      alert(`Erro ao alterar status do benefício: ${err.message}`);
+      console.error('Erro ao alterar status do benefício:', err);
+      alert('Não foi possível alterar o status do benefício. Tente novamente.');
     }
   };
 
@@ -108,7 +109,7 @@ export const BeneficiosPage: React.FC<BeneficiosPageProps> = ({
 
     try {
       await benefitService.saveBenefit({
-        id: editingBenefit?.id,
+        ...(editingBenefit?.id ? { id: editingBenefit.id } : {}),
         title,
         description,
         category,
@@ -120,7 +121,18 @@ export const BeneficiosPage: React.FC<BeneficiosPageProps> = ({
       await loadData();
       setIsModalOpen(false);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao salvar benefício.');
+      console.error('Erro ao salvar benefício:', err);
+      let userMsg = 'Não foi possível salvar o benefício. Tente novamente.';
+      if (
+        err instanceof Error &&
+        err.message &&
+        !err.message.includes('{') &&
+        !err.message.includes('FirebaseError') &&
+        !err.message.includes('authInfo')
+      ) {
+        userMsg = err.message;
+      }
+      setFormError(userMsg);
     } finally {
       setIsSaving(false);
     }

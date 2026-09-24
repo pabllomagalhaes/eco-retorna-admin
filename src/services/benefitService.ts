@@ -36,14 +36,20 @@ export const benefitService = {
       throw new Error('O estoque não pode ser negativo.');
     }
 
+    const cleanPayload: Omit<Benefit, 'id' | 'createdAt' | 'updatedAt'> = {
+      title: data.title.trim(),
+      description: data.description.trim(),
+      category: data.category,
+      pointsRequired: Number(data.pointsRequired),
+      stock: data.stock !== null && data.stock !== undefined ? Number(data.stock) : null,
+      active: Boolean(data.active),
+      ...(data.imageUrl?.trim() ? { imageUrl: data.imageUrl.trim() } : {}),
+    };
+
     if (data.id) {
-      return benefitRepository.update(data.id, data);
+      return benefitRepository.update(data.id, cleanPayload);
     } else {
-      return benefitRepository.create({
-        ...data,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      return benefitRepository.create(cleanPayload);
     }
   },
 

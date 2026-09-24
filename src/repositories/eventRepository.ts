@@ -40,17 +40,24 @@ export const eventRepository = {
     return all.find((e) => e.id === id) || null;
   },
 
-  async create(eventItem: Omit<EventItem, 'id'>): Promise<EventItem> {
+  async create(eventItem: Omit<EventItem, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }): Promise<EventItem> {
     const id = `ev-${Date.now()}`;
-    const newEvent: EventItem = {
-      id,
-      ...eventItem,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const now = new Date().toISOString();
+    const { id: _ignoredId, ...payload } = eventItem as any;
+
+    const firestorePayload = {
+      ...payload,
+      createdAt: now,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('events', id, newEvent, 'set');
+    await writeToFirestoreFirst('events', id, firestorePayload, 'set');
+
+    const newEvent: EventItem = {
+      id,
+      ...firestorePayload,
+    };
 
     localStore.data.events.unshift(newEvent);
     localStore.save();
@@ -66,14 +73,33 @@ export const eventRepository = {
       throw new Error(`Evento com ID '${id}' não encontrado.`);
     }
 
-    const updated: EventItem = {
-      ...(existing || { id, title: '', description: '', date: '', time: '', location: '', category: '', type: 'evento', active: true, createdAt: '' }),
-      ...updates,
-      updatedAt: new Date().toISOString(),
+    const { id: _ignoredId, ...payloadUpdates } = updates as any;
+    const now = new Date().toISOString();
+
+    const firestorePayload = {
+      ...payloadUpdates,
+      updatedAt: now,
     };
 
     // Remote-first
-    await writeToFirestoreFirst('events', id, updated, 'update');
+    await writeToFirestoreFirst('events', id, firestorePayload, 'update');
+
+    const updated: EventItem = {
+      ...(existing || {
+        id,
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        category: '',
+        type: 'evento',
+        active: true,
+        createdAt: now,
+      }),
+      ...firestorePayload,
+      id,
+    };
 
     if (index >= 0) {
       localStore.data.events[index] = updated;
