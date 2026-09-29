@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "ecoretorna-98eca"
-  }
+  },
+  "targets": {
+    "ecoretorna-98eca": {
+      "hosting": {
+        "admin": [
+          "ecoretorna-98eca-admin"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
