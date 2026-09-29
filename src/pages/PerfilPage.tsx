@@ -41,14 +41,14 @@ export const PerfilPage: React.FC<PerfilPageProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
               <p className="text-slate-400 text-[11px]">Nível de Acesso (RBAC)</p>
-              <p className="font-bold text-slate-800 text-sm mt-0.5">Operador & Gestor</p>
+              <p className="font-bold text-slate-800 text-sm mt-0.5">Administrador</p>
               <span className="text-[10px] text-slate-500">Documento users/{currentUser?.id}</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-              <p className="text-slate-400 text-[11px]">Permissão de Gravação</p>
-              <p className="font-bold text-emerald-700 text-sm mt-0.5">recyclingRecords</p>
-              <span className="text-[10px] text-slate-500">Exclusiva para administradores</span>
+              <p className="text-slate-400 text-[11px]">Consulta de histórico</p>
+              <p className="font-bold text-slate-800 text-sm mt-0.5">recyclingRecords</p>
+              <span className="text-[10px] text-slate-500">Somente leitura pela interface administrativa</span>
             </div>
           </div>
 

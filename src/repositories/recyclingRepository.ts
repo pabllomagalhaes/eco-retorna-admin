@@ -12,7 +12,7 @@
 import type { RecyclingRecord } from '../types';
 import { localStore } from './storageAdapter';
 import { db, auth, isFirebaseConfigured } from '../firebase/config';
-import { collection, getDocs, doc, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../firebase/errors';
 
 export const recyclingRepository = {
@@ -33,54 +33,6 @@ export const recyclingRepository = {
       }
     }
     return [...localStore.data.recyclingRecords];
-  },
-
-  /**
-   * Creates a batch of recycling records.
-   * When Firebase is configured:
-   * 1. Prepares Firestore batch write;
-   * 2. Commits to Firestore FIRST;
-   * 3. Only on remote commit success, updates localStore and cache;
-   * 4. If remote write fails, throws error immediately without touching localStore.
-   */
-  async createBatch(records: Omit<RecyclingRecord, 'id'>[]): Promise<RecyclingRecord[]> {
-    const created: RecyclingRecord[] = [];
-    const timestamp = Date.now();
-
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
-      const id = `rec-${timestamp}-${i + 1}`;
-      created.push({ id, ...record });
-    }
-
-    if (isFirebaseConfigured && db) {
-      try {
-        const batch = writeBatch(db);
-        for (const item of created) {
-          const docRef = doc(db, 'recyclingRecords', item.id);
-          const { id: _ignoredId, ...payload } = item;
-          const sanitizedPayload: Record<string, any> = {};
-          for (const [key, value] of Object.entries(payload)) {
-            if (value !== undefined) {
-              sanitizedPayload[key] = value;
-            }
-          }
-          batch.set(docRef, sanitizedPayload);
-        }
-        // Commit remotely first
-        await batch.commit();
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, 'recyclingRecords', auth?.currentUser);
-      }
-    }
-
-    // Only update local store after remote write succeeded
-    for (const item of created) {
-      localStore.data.recyclingRecords.unshift(item);
-    }
-    localStore.save();
-
-    return created;
   },
 
   /**

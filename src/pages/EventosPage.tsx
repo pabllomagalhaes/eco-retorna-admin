@@ -343,7 +343,7 @@ export const EventosPage: React.FC<EventosPageProps> = ({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Mutirão de Limpeza no Parque Barigui"
+              placeholder="Ex: Mutirão de Limpeza no Lago das Araucárias"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold text-sm"
             />
           </div>
@@ -410,7 +410,7 @@ export const EventosPage: React.FC<EventosPageProps> = ({
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Ex: Estação Parque Barigui - Portão Principal"
+              placeholder="Ex: Lago das Araucárias - Entrada Principal"
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
             />
           </div>

@@ -179,8 +179,7 @@ service cloud.firestore {
     // ==================================================
     match /collectionPoints/{id} {
       allow read: if isSignedIn();
-      allow create, update: if isAdmin();
-      allow delete: if false;
+      allow create, update, delete: if isAdmin();
     }
 
     // ==================================================

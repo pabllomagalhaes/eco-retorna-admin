@@ -124,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   Admin
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Gestão & Operação</p>
+              <p className="text-xs text-slate-400 font-medium">Gestão da Plataforma</p>
             </div>
           </div>
           <button
@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {currentUser?.name || 'Administrador'}
                 </p>
                 <p className="text-[11px] text-slate-400 truncate">
-                  {currentUser?.email || 'admin@ecoretorna.com'}
+                  {currentUser?.email || 'Administrador'}
                 </p>
               </div>
             </div>

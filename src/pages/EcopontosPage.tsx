@@ -3,6 +3,7 @@ import {
   MapPin,
   Plus,
   Edit2,
+  Trash2,
   Clock,
   Layers,
   AlertCircle,
@@ -13,6 +14,7 @@ import { ecopontoService } from '../services/ecopontoService';
 import { materialService } from '../services/materialService';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import type { CollectionPoint, Material } from '../types';
 
@@ -25,13 +27,18 @@ export const EcopontosPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPoint, setEditingPoint] = useState<CollectionPoint | null>(null);
 
+  // Delete Dialog State
+  const [pointToDelete, setPointToDelete] = useState<CollectionPoint | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Form State
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
-  const [city, setCity] = useState('Curitiba - PR');
-  const [latitude, setLatitude] = useState(-25.4411);
-  const [longitude, setLongitude] = useState(-49.2785);
+  const [city, setCity] = useState('Fraiburgo - SC');
+  const [latitude, setLatitude] = useState<string | number>('');
+  const [longitude, setLongitude] = useState<string | number>('');
   const [operatingHours, setOperatingHours] = useState('08:00 às 18:00');
   const [acceptedMaterials, setAcceptedMaterials] = useState<string[]>(['PET', 'Alumínio']);
   const [description, setDescription] = useState('');
@@ -65,9 +72,9 @@ export const EcopontosPage: React.FC = () => {
     setName('');
     setAddress('');
     setNeighborhood('');
-    setCity('Curitiba - PR');
-    setLatitude(-25.4411);
-    setLongitude(-49.2785);
+    setCity('Fraiburgo - SC');
+    setLatitude('');
+    setLongitude('');
     setOperatingHours('08:00 às 18:00');
     setAcceptedMaterials(['PET', 'Alumínio']);
     setDescription('');
@@ -82,9 +89,9 @@ export const EcopontosPage: React.FC = () => {
     setName(pt.name);
     setAddress(pt.address);
     setNeighborhood(pt.neighborhood);
-    setCity(pt.city || 'Curitiba - PR');
-    setLatitude(pt.latitude);
-    setLongitude(pt.longitude);
+    setCity(pt.city || 'Fraiburgo - SC');
+    setLatitude(pt.latitude !== 0 ? pt.latitude : '');
+    setLongitude(pt.longitude !== 0 ? pt.longitude : '');
     setOperatingHours(pt.operatingHours || pt.openingHours || '08:00 às 18:00');
     setAcceptedMaterials(pt.acceptedMaterials || ['PET', 'Alumínio']);
     setDescription(pt.description || '');
@@ -112,9 +119,44 @@ export const EcopontosPage: React.FC = () => {
     }
   };
 
+  const handlePromptDelete = (pt: CollectionPoint) => {
+    setPointToDelete(pt);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pointToDelete) return;
+    setIsDeleting(true);
+    try {
+      await ecopontoService.deletePoint(pointToDelete.id);
+      setPoints((prev) => prev.filter((p) => p.id !== pointToDelete.id));
+      setIsDeleteDialogOpen(false);
+      setPointToDelete(null);
+    } catch (err: any) {
+      console.error('Erro ao excluir ecoponto:', err);
+      alert('Não foi possível excluir o ecoponto. Tente novamente.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSavePoint = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    const numLat = typeof latitude === 'number' ? latitude : parseFloat(String(latitude));
+    const numLng = typeof longitude === 'number' ? longitude : parseFloat(String(longitude));
+
+    if (isNaN(numLat) || isNaN(numLng) || (numLat === 0 && numLng === 0)) {
+      setFormError('Informe coordenadas geográficas válidas (latitude e longitude) para o ecoponto.');
+      return;
+    }
+
+    if (numLat < -90 || numLat > 90 || numLng < -180 || numLng > 180) {
+      setFormError('As coordenadas geográficas informadas são inválidas.');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -123,9 +165,9 @@ export const EcopontosPage: React.FC = () => {
         name,
         address,
         neighborhood,
-        city,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
+        city: city.trim() || 'Fraiburgo - SC',
+        latitude: numLat,
+        longitude: numLng,
         operatingHours,
         acceptedMaterials,
         description,
@@ -265,14 +307,26 @@ export const EcopontosPage: React.FC = () => {
                 >
                   {pt.active ? 'Suspender Unidade' : 'Reativar Unidade'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenEdit(pt)}
-                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                  title="Editar Ecoponto"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(pt)}
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                    title="Editar Ecoponto"
+                    aria-label={`Editar ecoponto ${pt.name}`}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePromptDelete(pt)}
+                    className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
+                    title="Excluir Ecoponto"
+                    aria-label={`Excluir ecoponto ${pt.name}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -333,7 +387,7 @@ export const EcopontosPage: React.FC = () => {
                 required
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
-                placeholder="Ex: Batel ou Centro"
+                placeholder="Ex: Centro ou São Sebastião"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
               />
             </div>
@@ -349,7 +403,7 @@ export const EcopontosPage: React.FC = () => {
                 required
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="Ex: Curitiba - PR"
+                placeholder="Ex: Fraiburgo - SC"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
               />
             </div>
@@ -379,7 +433,8 @@ export const EcopontosPage: React.FC = () => {
                 step="0.000001"
                 required
                 value={latitude}
-                onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="Ex: -27.0261"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono"
               />
             </div>
@@ -393,7 +448,8 @@ export const EcopontosPage: React.FC = () => {
                 step="0.000001"
                 required
                 value={longitude}
-                onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="Ex: -50.9214"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono"
               />
             </div>
@@ -484,6 +540,24 @@ export const EcopontosPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteDialogOpen(false);
+            setPointToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Excluir este ecoponto?"
+        message="Esta ação removerá o ponto do mapa e não poderá ser desfeita."
+        confirmLabel="Excluir Ecoponto"
+        cancelLabel="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

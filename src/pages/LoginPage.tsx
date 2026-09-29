@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Leaf, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Leaf, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import { authService } from '../services/authService';
 import type { UserProfile } from '../types';
 
@@ -28,12 +28,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleQuickFill = (fillEmail: string, fillPass: string) => {
-    setEmail(fillEmail);
-    setPassword(fillPass);
-    setErrorMessage(null);
-  };
-
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background decorations */}
@@ -50,7 +44,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           EcoRetorna Admin
         </h2>
         <p className="mt-1 text-center text-xs sm:text-sm text-slate-400 font-medium">
-          Acesso Restrito à Gestão e Operação
+          Acesso Restrito à Gestão da Plataforma
         </p>
       </div>
 
@@ -84,7 +78,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@ecoretorna.com"
+                  placeholder="seu-email@exemplo.com"
                   className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 />
               </div>
@@ -128,48 +122,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               )}
             </button>
           </form>
-
-          {/* Verification & testing helpers */}
-          <div className="mt-6 pt-6 border-t border-slate-700/80 text-xs">
-            <div className="flex items-center gap-2 text-slate-400 font-semibold mb-3">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Ambiente de Avaliação & Testes</span>
-            </div>
-
-            <div className="space-y-2">
-              <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-700 flex items-center justify-between">
-                <div>
-                  <p className="text-slate-200 font-semibold text-[11px]">Conta Administrador (role: admin)</p>
-                  <p className="text-slate-400 text-[10px]">admin@ecoretorna.com</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('admin@ecoretorna.com', 'admin123')}
-                  className="px-2.5 py-1 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md border border-emerald-500/30 transition-all"
-                >
-                  Usar Admin
-                </button>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-700 flex items-center justify-between">
-                <div>
-                  <p className="text-slate-200 font-semibold text-[11px]">Testar Bloqueio de Participante (role: participant)</p>
-                  <p className="text-slate-400 text-[10px]">camila.demo@ecoretorna.com</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('camila.demo@ecoretorna.com', 'senha123')}
-                  className="px-2.5 py-1 text-[11px] font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 rounded-md border border-rose-500/30 transition-all"
-                >
-                  Testar Bloqueio
-                </button>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-500 text-center mt-4">
-              Cadastro público de administradores não permitido.
-            </p>
-          </div>
         </div>
       </div>
     </div>

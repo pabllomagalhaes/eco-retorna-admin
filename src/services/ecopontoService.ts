@@ -36,16 +36,24 @@ export const ecopontoService = {
     if (!data.address.trim()) {
       throw new Error('O endereço do ecoponto é obrigatório.');
     }
+    const lat = Number(data.latitude);
+    const lng = Number(data.longitude);
+    if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+      throw new Error('Informe coordenadas geográficas válidas (latitude e longitude) para o ecoponto.');
+    }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      throw new Error('As coordenadas geográficas informadas são inválidas.');
+    }
 
     const cleanPayload: Omit<CollectionPoint, 'id' | 'createdAt' | 'updatedAt'> = {
       name: data.name.trim(),
       address: data.address.trim(),
       neighborhood: data.neighborhood.trim(),
-      city: data.city.trim() || 'Curitiba - PR',
+      city: data.city.trim() || 'Fraiburgo - SC',
       operatingHours: data.operatingHours.trim() || '08:00 às 18:00',
       acceptedMaterials: data.acceptedMaterials,
-      latitude: Number(data.latitude) || 0,
-      longitude: Number(data.longitude) || 0,
+      latitude: lat,
+      longitude: lng,
       description: data.description.trim(),
       active: Boolean(data.active),
       ...(data.notes?.trim() ? { notes: data.notes.trim() } : {}),

@@ -8,14 +8,14 @@ No Google Firebase, as **Security Rules são globais no nível do projeto**. Iss
 
 ---
 
-## ⚠️ Risco Crítico de Sobrescrita
+## ⚠️ Risco de Dessincronização
 
-Se um desenvolvedor ou pipeline de CI/CD executar o deploy de regras a partir do projeto **EcoRetorna Participante** contendo um arquivo `firestore.rules` antigo (que não reconheça as funções administrativas ou não permita que admins criem `recyclingRecords`), **todas as permissões do EcoRetorna Admin serão imediatamente revogadas em produção**.
+Se um desenvolvedor ou pipeline de CI/CD executar o deploy de regras desatualizadas a partir de um dos projetos, **as permissões unificadas da plataforma poderão ser corrompidas**.
 
-Isso causará:
-1. Bloqueio no painel administrativo para registro de reciclagens.
-2. Bloqueio no gerenciamento de materiais, ecopontos, campanhas e eventos.
-3. Erros de `permission-denied` nas telas de gestão.
+Isso causaria:
+1. Bloqueio no gerenciamento de materiais, ecopontos, campanhas, benefícios e eventos.
+2. Erros de `permission-denied` nas consultas de métricas e indicadores.
+3. Inconsistência nos fluxos de validação de permissões administrativas.
 
 ---
 
@@ -25,7 +25,7 @@ A fonte canônica unificada de regras está mantida no arquivo:
 ```
 firestore.rules.unified
 ```
-(também espelhado em `firestore.rules` deste repositório).
+(também espelhado em `firestore.rules` de ambos os repositórios).
 
 ---
 
@@ -33,17 +33,10 @@ firestore.rules.unified
 
 Sempre que houver alteração nas regras de segurança:
 
-1. **Copiar o arquivo unificado para o projeto Participante:**
-   Copie o conteúdo de `firestore.rules.unified` (ou `firestore.rules`) do **EcoRetorna Admin** para o arquivo `firestore.rules` do **EcoRetorna Participante**:
-   ```bash
-   # Exemplo (ajustar caminhos conforme ambiente):
-   cp ./firestore.rules.unified ../eco_retorna_basico-main/firestore.rules
-   ```
+1. **Garantir a Paridade de Conteúdo:**
+   Certifique-se de que os arquivos `firestore.rules` e `firestore.rules.unified` estejam idênticos em ambos os projetos (`ecoretorna-admin` e `eco_retorna_basico`).
 
-2. **Verificar a paridade dos dois arquivos:**
-   Certifique-se de que os dois repositórios possuam exatamente o mesmo conteúdo para `firestore.rules`.
-
-3. **Deploy Seguro:**
+2. **Deploy Seguro:**
    O deploy pode ser executado a partir de qualquer um dos projetos, desde que ambos estejam estritamente sincronizados:
    ```bash
    firebase deploy --only firestore:rules
@@ -55,11 +48,13 @@ Sempre que houver alteração nas regras de segurança:
 
 1. **Função `isAdmin()`**:
    Exige usuário autenticado, documento existente em `users/{auth.uid}`, `role == "admin"` e `active == true`.
-2. **Imutabilidade de `recyclingRecords`**:
-   Registros históricos de reciclagem só podem ser criados por administradores ativos e **nunca** podem ser alterados ou excluídos por ninguém.
+2. **Imutabilidade e Consulta de `recyclingRecords`**:
+   - A interface do EcoRetorna Admin não possui cadastro manual de reciclagens; os registros representam eventos de coleta externa.
+   - O Admin consulta `recyclingRecords` para o cálculo de métricas agregadas e indicadores de impacto.
+   - Os registros históricos permanecem estritamente imutáveis (`update = false`, `delete = false`) para garantir a integridade dos dados.
 3. **Allowlist de Perfil do Participante**:
-   Participantes só podem atualizar os campos: `name`, `email`, `city`, `neighborhood`, `avatarUrl`, `preferences`, `updatedAt`. Campos sensíveis como `role`, `active`, `createdAt` e `isAdmin` são bloqueados contra alteração via cliente.
-4. **Catálogos Protegidos**:
-   Participantes possuem apenas permissão de leitura em `materials`, `settings`, `collectionPoints`, `events`, `campaigns`, `benefits` e `badges`.
+   Participantes só podem atualizar os campos: `name`, `email`, `city`, `neighborhood`, `avatarUrl`, `preferences`, `updatedAt`. Campos de controle como `role`, `active`, `createdAt` e `isAdmin` são bloqueados contra alteração via cliente.
+4. **Catálogos e Configurações**:
+   Participantes possuem apenas permissão de leitura em `materials`, `settings`, `collectionPoints`, `events`, `campaigns`, `benefits` e `badges`. Administradores ativos possuem permissão para configurar essas coleções.
 5. **Default Deny**:
    Qualquer coleção ou caminho não expressamente autorizado tem acesso bloqueado (`allow read, write: if false;`).

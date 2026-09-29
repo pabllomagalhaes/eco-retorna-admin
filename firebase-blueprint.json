@@ -95,7 +95,7 @@
         "pointsEarned": { "type": "number", "description": "Total points awarded" },
         "campaignId": { "type": "string", "description": "Active campaign applied" },
         "createdAt": { "type": "string", "description": "Transaction timestamp" },
-        "registeredByAdminUid": { "type": "string", "description": "Admin UID" }
+        "registeredByAdminUid": { "type": "string", "description": "Identificador técnico da origem/auditoria do registro" }
       }
     }
   }
